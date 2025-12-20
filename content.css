@@ -1,0 +1,38 @@
+/* Floating upload button on web pages */
+#ztr-floating-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  background: #000;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 999999;
+  transition: all 0.3s ease;
+}
+
+#ztr-floating-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+#ztr-floating-btn:active {
+  transform: scale(0.95);
+}
+
+#ztr-floating-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Drop zone highlight */
+body.ztr-drop-active {
+  outline: 3px dashed #000 !important;
+  outline-offset: -10px;
+}

@@ -1,0 +1,270 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 380px;
+  min-height: 500px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  background: #f5f5dc;
+  color: #000;
+  overflow-x: hidden;
+}
+
+.container {
+  position: relative;
+  padding: 20px;
+  background: #f5f5dc;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 300;
+  letter-spacing: 2px;
+}
+
+.header-icons {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #000;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: #000;
+  color: #fff;
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Upload Section */
+.upload-section {
+  border: 2px solid #000;
+  padding: 30px 20px;
+  text-align: center;
+  margin-bottom: 20px;
+  position: relative;
+  background: #fff;
+}
+
+.plus-icon {
+  font-size: 64px;
+  font-weight: 200;
+  line-height: 1;
+  margin-bottom: 15px;
+}
+
+.upload-title {
+  margin-bottom: 15px;
+}
+
+.upload-label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.files-folders {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.files, .folders {
+  letter-spacing: 2px;
+}
+
+.or {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+
+.transfer-badge {
+  display: inline-block;
+  background: #000;
+  color: #fff;
+  padding: 4px 12px;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+/* Instruction */
+.instruction {
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 25px;
+  padding: 0 10px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+/* Input Section */
+.input-section {
+  margin-bottom: 30px;
+}
+
+.input-group {
+  margin-bottom: 15px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.input-group input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #000;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  outline: none;
+  font-family: inherit;
+}
+
+.input-group input::placeholder {
+  color: #999;
+  letter-spacing: 1px;
+}
+
+.input-group input:focus {
+  border-bottom-color: #666;
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid #ccc;
+  padding-top: 15px;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.footer-link {
+  color: #000;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.footer-link:hover {
+  opacity: 0.6;
+}
+
+.separator {
+  color: #999;
+}
+
+.copyright {
+  font-size: 7px;
+  letter-spacing: 0.5px;
+  text-align: center;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* Close Button */
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #000;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-weight: 300;
+  line-height: 1;
+  transition: opacity 0.2s;
+}
+
+.close-btn:hover {
+  opacity: 0.8;
+}
+
+/* Drop Overlay */
+.drop-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.drop-overlay.active {
+  display: flex;
+}
+
+.drop-text {
+  color: #fff;
+  font-size: 24px;
+  letter-spacing: 3px;
+  font-weight: 600;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
