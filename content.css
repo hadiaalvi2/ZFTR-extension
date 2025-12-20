@@ -3,8 +3,8 @@
   position: fixed;
   bottom: 30px;
   right: 30px;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   background: #000;
   color: #fff;
   border-radius: 50%;
@@ -12,14 +12,16 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   z-index: 999999;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
 }
 
 #ztr-floating-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  transform: scale(1.15);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  background: #1a1a1a;
 }
 
 #ztr-floating-btn:active {
@@ -27,12 +29,112 @@
 }
 
 #ztr-floating-btn svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
-/* Drop zone highlight */
-body.ztr-drop-active {
-  outline: 3px dashed #000 !important;
-  outline-offset: -10px;
+/* Drop zone highlight overlay */
+.ztr-drop-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  z-index: 9999999 !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: none !important;
+}
+
+.ztr-drop-overlay.active {
+  display: flex !important;
+}
+
+.ztr-drop-text {
+  color: #fff !important;
+  font-size: 48px !important;
+  font-weight: 700 !important;
+  letter-spacing: 8px !important;
+  text-align: center !important;
+  animation: ztr-pulse 1.5s infinite !important;
+  text-shadow: 0 4px 20px rgba(255, 255, 255, 0.3) !important;
+}
+
+@keyframes ztr-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* Drop zone border highlight */
+body.ztr-drop-active::before {
+  content: '';
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  border: 4px dashed #fff;
+  z-index: 9999998;
+  pointer-events: none;
+  animation: ztr-border-pulse 1s infinite;
+}
+
+@keyframes ztr-border-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Notification style */
+.ztr-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #000;
+  color: #fff;
+  padding: 16px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 10000000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  letter-spacing: 1px;
+  animation: ztr-slide-in 0.3s ease;
+}
+
+@keyframes ztr-slide-in {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.ztr-notification.ztr-fade-out {
+  animation: ztr-slide-out 0.3s ease forwards;
+}
+
+@keyframes ztr-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
 }

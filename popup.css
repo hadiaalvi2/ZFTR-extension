@@ -5,18 +5,21 @@
 }
 
 body {
-  width: 380px;
-  min-height: 500px;
+  width: 512px;
+  height: 618px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   background: #f5f5dc;
   color: #000;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .container {
   position: relative;
-  padding: 20px;
+  padding: 20px 38px 24px;
   background: #f5f5dc;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Header */
@@ -24,31 +27,31 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 26px;
 }
 
-.logo {
-  font-size: 24px;
-  font-weight: 300;
-  letter-spacing: 2px;
+.logo img {
+  height: 20px;
+  width: auto;
 }
 
 .header-icons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: 1px solid #000;
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 2px;
   transition: all 0.2s;
+  padding: 0;
 }
 
 .icon-btn:hover {
@@ -56,97 +59,156 @@ body {
   color: #fff;
 }
 
-.icon-btn svg {
-  width: 18px;
-  height: 18px;
+.icon-btn:hover img {
+  filter: invert(1);
+}
+
+.icon-btn img {
+  width: 16px;
+  height: 16px;
 }
 
 /* Upload Section */
 .upload-section {
-  border: 2px solid #000;
-  padding: 30px 20px;
-  text-align: center;
+  border: 1.5px solid #000;
+  padding: 0;
+  text-align: left;
   margin-bottom: 20px;
   position: relative;
   background: #fff;
+  cursor: pointer;
+}
+
+.upload-main {
+  display: flex;
+  align-items: stretch;
+  min-height: 280px;
+}
+
+.left-side {
+  flex: 0 0 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  border-right: 1.5px solid #000;
+  position: relative;
+}
+
+.lock-icon {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
 }
 
 .plus-icon {
-  font-size: 64px;
-  font-weight: 200;
-  line-height: 1;
-  margin-bottom: 15px;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.upload-title {
-  margin-bottom: 15px;
+.plus-icon img {
+  width: 100%;
+  height: 100%;
+  opacity: 0.85;
+}
+
+.right-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 24px;
+  position: relative;
+}
+
+.upload-label-wrapper {
+  margin-bottom: 10px;
+  position: relative;
+  padding-bottom: 8px;
 }
 
 .upload-label {
-  font-size: 11px;
-  letter-spacing: 3px;
+  font-size: 9px;
+  letter-spacing: 3.5px;
   font-weight: 600;
   display: block;
-  margin-bottom: 8px;
+}
+
+.upload-label-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1.5px;
+  background: linear-gradient(to right, 
+    #4285f4 0%, #4285f4 25%,
+    #ea4335 25%, #ea4335 50%,
+    #fbbc04 50%, #fbbc04 75%,
+    #34a853 75%, #34a853 100%
+  );
 }
 
 .files-folders {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 22px;
-  font-weight: 700;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 28px;
+  font-weight: 600;
   letter-spacing: 1px;
+  margin-bottom: 20px;
 }
 
 .files, .folders {
   letter-spacing: 2px;
-}
-
-.or {
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 1px;
+  line-height: 1.1;
 }
 
 .transfer-badge {
   display: inline-block;
   background: #000;
   color: #fff;
-  padding: 4px 12px;
-  font-size: 9px;
-  letter-spacing: 1.5px;
+  padding: 5px 14px;
+  font-size: 7.5px;
+  letter-spacing: 1.8px;
   font-weight: 600;
-  margin-top: 10px;
+  align-self: flex-start;
 }
 
 /* Instruction */
 .instruction {
-  font-size: 9px;
+  font-size: 7.5px;
   letter-spacing: 1px;
   text-align: center;
-  margin-bottom: 25px;
-  padding: 0 10px;
-  line-height: 1.5;
+  margin-bottom: 28px;
+  padding: 0 20px;
+  line-height: 1.6;
   font-weight: 500;
 }
 
 /* Input Section */
 .input-section {
-  margin-bottom: 30px;
+  margin-bottom: 32px;
+  flex: 1;
 }
 
 .input-group {
-  margin-bottom: 15px;
+  margin-bottom: 24px;
+  position: relative;
 }
 
 .input-group label {
   display: block;
-  font-size: 10px;
-  letter-spacing: 1.5px;
+  font-size: 8.5px;
+  letter-spacing: 1.8px;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
 
 .input-group input {
@@ -154,26 +216,37 @@ body {
   border: none;
   border-bottom: 1px solid #000;
   background: transparent;
-  padding: 8px 0;
-  font-size: 11px;
-  letter-spacing: 0.5px;
+  padding: 7px 0;
+  font-size: 10px;
+  letter-spacing: 0.3px;
   outline: none;
   font-family: inherit;
+  color: #666;
 }
 
 .input-group input::placeholder {
   color: #999;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  font-size: 9px;
 }
 
 .input-group input:focus {
   border-bottom-color: #666;
 }
 
+.note-hint {
+  font-size: 7px;
+  letter-spacing: 0.8px;
+  color: #999;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
 /* Footer */
 .footer {
-  border-top: 1px solid #ccc;
-  padding-top: 15px;
+  border-top: 1px solid #d0d0d0;
+  padding-top: 16px;
+  margin-top: auto;
 }
 
 .footer-links {
@@ -181,8 +254,8 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 10px;
-  font-size: 10px;
+  margin-bottom: 8px;
+  font-size: 9px;
   letter-spacing: 1px;
 }
 
@@ -202,32 +275,37 @@ body {
 }
 
 .copyright {
-  font-size: 7px;
-  letter-spacing: 0.5px;
+  font-size: 6.5px;
+  letter-spacing: 0.4px;
   text-align: center;
   color: #666;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 /* Close Button */
 .close-btn {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 36px;
-  height: 36px;
+  top: 20px;
+  right: 38px;
+  width: 28px;
+  height: 28px;
   border: none;
   background: #000;
   color: #fff;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 2px;
   font-weight: 300;
   line-height: 1;
   transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.container:hover .close-btn {
+  display: flex;
 }
 
 .close-btn:hover {
