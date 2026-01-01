@@ -138,7 +138,7 @@ function showUploadModal() {
     }
     
     .upload-modal-content {
-      background: #f5f5dc;
+      background: #fff;
       padding: 30px;
       border-radius: 0;
       text-align: center;
@@ -494,7 +494,7 @@ function showHistoryModal(transfers) {
       left: 0;
       width: 100%;
       height: 100%;
-      background: #f5f5dc;
+      background: #fff;
       z-index: 9999;
       animation: fadeIn 0.2s ease;
       overflow-y: auto;
@@ -637,7 +637,7 @@ function showHistoryModal(transfers) {
 
 // Color theme button
 const themes = [
-  { name: 'Beige', color: '#f5f5dc' },
+  { name: 'Beige', color: '#fff' },
   { name: 'Blue', color: '#e8f4f8' },
   { name: 'Yellow', color: '#fef5e7' },
   { name: 'Gray', color: '#f0f0f0' },

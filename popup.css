@@ -8,7 +8,7 @@ body {
   width: 512px;
   height: 618px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-  background: #f5f5dc;
+  background: #ffffff;
   color: #000;
   overflow: hidden;
 }
@@ -16,7 +16,7 @@ body {
 .container {
   position: relative;
   padding: 20px 38px 24px;
-  background: #f5f5dc;
+  background: #ffffff;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -244,42 +244,42 @@ body {
 
 /* Footer */
 .footer {
-  border-top: 1px solid #d0d0d0;
-  padding-top: 16px;
   margin-top: auto;
+  padding: 20px 0;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  color: #000000;
+  letter-spacing: 0.5px;
 }
 
 .footer-links {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 9px;
-  letter-spacing: 1px;
+  gap: 15px;
 }
 
 .footer-link {
-  color: #000;
+  color: #000000;
   text-decoration: none;
-  font-weight: 600;
-  transition: opacity 0.2s;
+  font-weight: 500;
+  transition: color 0.2s;
 }
 
 .footer-link:hover {
-  opacity: 0.6;
+  color: #666;
+}
+
+.copyright {
+  color: #000000;
+  font-weight: 400;
 }
 
 .separator {
   color: #999;
-}
-
-.copyright {
-  font-size: 6.5px;
-  letter-spacing: 0.4px;
-  text-align: center;
-  color: #666;
-  line-height: 1.5;
 }
 
 /* Close Button */

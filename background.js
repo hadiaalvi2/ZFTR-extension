@@ -8,7 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({
     transfers: [],
     settings: {
-      theme: '#f5f5dc',
+      theme: '#ffffffff',
       notifications: true,
       maxHistory: 100
     }
