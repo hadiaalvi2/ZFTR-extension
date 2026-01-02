@@ -5,8 +5,8 @@
 }
 
 body {
-  width: 512px;
-  height: 618px;
+  width: 420px;
+  height: 590px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   background: #ffffff;
   color: #000;
@@ -15,7 +15,7 @@ body {
 
 .container {
   position: relative;
-  padding: 20px 38px 24px;
+  padding: 20px 28px 24px;
   background: #ffffff;
   height: 100%;
   display: flex;
@@ -43,34 +43,39 @@ body {
 .icon-btn {
   width: 28px;
   height: 28px;
-  border: 1px solid #000;
+  border: none;
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 2px;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
   padding: 0;
 }
 
 .icon-btn:hover {
-  background: #000;
-  color: #fff;
+  background: transparent;
+  transform: scale(1.1);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
 }
 
 .icon-btn:hover img {
-  filter: invert(1);
+  opacity: 0.6;
 }
 
 .icon-btn img {
   width: 16px;
   height: 16px;
+  transition: opacity 0.3s ease;
 }
 
 /* Upload Section */
 .upload-section {
-  border: 1.5px solid #000;
+  border: none;
   padding: 0;
   text-align: left;
   margin-bottom: 20px;
@@ -86,67 +91,85 @@ body {
 }
 
 .left-side {
-  flex: 0 0 180px;
+  flex: 0 0 120px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 30px 20px;
-  border-right: 1.5px solid #000;
+  justify-content: flex-start;
+  padding: 20px;
+  padding-top: 40px;
+  border-right: none;
   position: relative;
+  gap: 0;
 }
 
 .lock-icon {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  width: 14px;
-  height: 14px;
-  opacity: 0.7;
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+  margin-bottom: 25px;
 }
 
 .plus-icon {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 80px;
 }
 
 .plus-icon img {
   width: 100%;
   height: 100%;
-  opacity: 0.85;
+  opacity: 1;
+}
+
+.upload-text {
+  font-size: 8.5px;
+  letter-spacing: 2.8px;
+  font-weight: 600;
+  transform: rotate(90deg);
+  white-space: nowrap;
 }
 
 .right-side {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 30px 24px;
+  padding: 40px 30px;
   position: relative;
 }
 
-.upload-label-wrapper {
-  margin-bottom: 10px;
-  position: relative;
-  padding-bottom: 8px;
-}
-
-.upload-label {
-  font-size: 9px;
-  letter-spacing: 3.5px;
+.files-folders {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-size: 36px;
   font-weight: 600;
-  display: block;
+  letter-spacing: 3px;
+  margin-bottom: 16px;
+  position: relative;
 }
 
-.upload-label-wrapper::after {
+.files, .folders {
+  letter-spacing: 2px;
+  line-height: 1.1;
+}
+
+.files {
+  position: relative;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+}
+
+.files::after {
   content: '';
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 1.5px;
+  height: 3px;
   background: linear-gradient(to right, 
     #4285f4 0%, #4285f4 25%,
     #ea4335 25%, #ea4335 50%,
@@ -155,29 +178,14 @@ body {
   );
 }
 
-.files-folders {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  margin-bottom: 20px;
-}
-
-.files, .folders {
-  letter-spacing: 2px;
-  line-height: 1.1;
-}
-
 .transfer-badge {
   display: inline-block;
   background: #000;
   color: #fff;
-  padding: 5px 14px;
-  font-size: 7.5px;
-  letter-spacing: 1.8px;
-  font-weight: 600;
+  padding: 4px 10px;
+  font-size: 6.5px;
+  letter-spacing: 1.5px;
+  font-weight: 700;
   align-self: flex-start;
 }
 
@@ -284,32 +292,7 @@ body {
 
 /* Close Button */
 .close-btn {
-  position: absolute;
-  top: 20px;
-  right: 38px;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: #000;
-  color: #fff;
-  font-size: 20px;
-  cursor: pointer;
   display: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 2px;
-  font-weight: 300;
-  line-height: 1;
-  transition: opacity 0.2s;
-  z-index: 10;
-}
-
-.container:hover .close-btn {
-  display: flex;
-}
-
-.close-btn:hover {
-  opacity: 0.8;
 }
 
 /* Drop Overlay */
