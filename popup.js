@@ -7,6 +7,18 @@ const colorBtn = document.getElementById('colorBtn');
 const uploadSection = document.querySelector('.upload-section');
 const closeBtn = document.getElementById('closeBtn');
 
+const actionSection = document.getElementById('actionSection');
+const getLinkBtn = document.getElementById('getLinkBtn');
+const uploadStatus = document.getElementById('uploadStatus');
+const uploadComplete = document.getElementById('uploadComplete');
+const cancelUploadBtn = document.getElementById('cancelUploadBtn');
+const copyLinkBtn = document.getElementById('copyLinkBtn');
+const generatedLink = document.getElementById('generatedLink');
+const qrCode = document.getElementById('qrCode');
+
+let uploadedFiles = [];
+let uploadAborted = false;
+
 // Character counter for title
 titleInput.addEventListener('input', (e) => {
   const len = e.target.value.length;
@@ -237,67 +249,310 @@ function triggerFileInput(isFolder) {
 }
 
 // Handle file uploads
+// Handle file uploads
 function handleFiles(files) {
   if (files.length === 0) return;
   
-  console.log('Processing files:', files);
+  console.log('Files dropped:', files);
+  uploadedFiles = files;
   
-  // Determine if folders are included
-  const hasFolder = files.some(f => f.webkitRelativePath && f.webkitRelativePath.includes('/'));
+  // Show file list
+  displayFileList(files);
   
-  // Calculate total size
-  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+  // Show action section
+  const fileListSection = document.getElementById('fileListSection');
+  fileListSection.style.display = 'block';
+  actionSection.style.display = 'block';
   
-  // Store file information
-  const fileData = {
-    title: titleInput.value.trim() || 'Untitled Transfer',
-    note: noteInput.value.trim() || '',
-    files: files.map(f => ({
-      name: f.name,
-      size: f.size,
-      type: f.type || 'application/octet-stream',
-      lastModified: f.lastModified,
-      path: f.webkitRelativePath || f.name
-    })),
-    hasFolder: hasFolder,
-    fileCount: files.length,
-    totalSize: totalSize,
-    timestamp: new Date().toISOString(),
-    id: generateId()
-  };
+  // Adjust body height
+  adjustBodyHeight();
   
-  // Show upload progress
-  showUploadProgress(fileData);
+  // Hide any previous upload states
+  uploadStatus.style.display = 'none';
+  uploadComplete.style.display = 'none';
+  getLinkBtn.style.display = 'block';
+}
+
+// Display file list
+function displayFileList(files) {
+  const fileList = document.getElementById('fileList');
+  fileList.innerHTML = '';
   
-  // Simulate upload (in real implementation, this would upload to a server)
+  // Group files by folder
+  const filesByFolder = new Map();
+  
+  files.forEach((file, index) => {
+    const path = file.webkitRelativePath || file.name;
+    const pathParts = path.split('/');
+    
+    if (pathParts.length > 1) {
+      // File is in a folder
+      const folderName = pathParts[0];
+      if (!filesByFolder.has(folderName)) {
+        filesByFolder.set(folderName, []);
+      }
+      filesByFolder.get(folderName).push({ file, index });
+    } else {
+      // Single file
+      filesByFolder.set(path, [{ file, index }]);
+    }
+  });
+  
+  // Display files
+  filesByFolder.forEach((items, key) => {
+    if (items.length > 1) {
+      // It's a folder
+      const folderSize = items.reduce((sum, item) => sum + item.file.size, 0);
+      const fileItem = createFileItem(key, items.length, folderSize, true, items[0].index);
+      fileList.appendChild(fileItem);
+    } else {
+      // Single file
+      const { file, index } = items[0];
+      const fileItem = createFileItem(file.name, 1, file.size, false, index, getFileExtension(file.name));
+      fileList.appendChild(fileItem);
+    }
+  });
+}
+
+// Create file item element
+function createFileItem(name, count, size, isFolder, index, extension = '') {
+  const item = document.createElement('div');
+  item.className = 'file-item';
+  item.dataset.index = index;
+  
+  const displayName = isFolder ? name : name;
+  const details = isFolder 
+    ? `${count} files - ${formatBytes(size)}` 
+    : `${formatBytes(size)} - ${extension.toUpperCase()}`;
+  
+  item.innerHTML = `
+    <div class="file-item-left">
+      <div class="file-item-name">
+        ${isFolder ? '<span class="folder-indicator">📁</span>' : ''}
+        ${escapeHtml(displayName)}
+      </div>
+      <div class="file-item-details">${details}</div>
+    </div>
+    <div class="file-item-right">
+      <button class="file-remove-btn" title="Remove">×</button>
+    </div>
+  `;
+  
+  // Add remove functionality
+  const removeBtn = item.querySelector('.file-remove-btn');
+  removeBtn.addEventListener('click', () => {
+    removeFile(index, isFolder ? name : null);
+  });
+  
+  return item;
+}
+
+// Get file extension
+function getFileExtension(filename) {
+  const ext = filename.split('.').pop();
+  return ext === filename ? '' : ext;
+}
+
+// Remove file from list
+function removeFile(startIndex, folderName) {
+  if (folderName) {
+    // Remove all files in folder
+    uploadedFiles = uploadedFiles.filter(file => {
+      const path = file.webkitRelativePath || file.name;
+      return !path.startsWith(folderName + '/');
+    });
+  } else {
+    // Remove single file
+    uploadedFiles.splice(startIndex, 1);
+  }
+  
+  if (uploadedFiles.length === 0) {
+    // Hide sections if no files left
+    document.getElementById('fileListSection').style.display = 'none';
+    actionSection.style.display = 'none';
+    adjustBodyHeight();
+  } else {
+    // Re-display file list
+    displayFileList(uploadedFiles);
+    adjustBodyHeight();
+  }
+}
+
+// Adjust body height dynamically
+function adjustBodyHeight() {
   setTimeout(() => {
-    // Save to storage
+    const containerHeight = document.querySelector('.container').offsetHeight;
+    document.body.style.height = Math.min(containerHeight + 40, 800) + 'px';
+  }, 100);
+}
+
+// Validate inputs
+function validateInputs() {
+  let isValid = true;
+  
+  // Validate title
+  const titleGroup = titleInput.closest('.input-group');
+  const existingTitleError = titleGroup.querySelector('.error-message');
+  if (existingTitleError) existingTitleError.remove();
+  titleGroup.classList.remove('error');
+  
+  if (!titleInput.value.trim()) {
+    titleGroup.classList.add('error');
+    const error = document.createElement('div');
+    error.className = 'error-message';
+    error.textContent = 'TITLE IS REQUIRED';
+    titleGroup.appendChild(error);
+    isValid = false;
+  }
+  
+  // Validate note
+  const noteGroup = noteInput.closest('.input-group');
+  const existingNoteError = noteGroup.querySelector('.error-message');
+  if (existingNoteError) existingNoteError.remove();
+  noteGroup.classList.remove('error');
+  
+  if (!noteInput.value.trim()) {
+    noteGroup.classList.add('error');
+    const error = document.createElement('div');
+    error.className = 'error-message';
+    error.textContent = 'NOTE IS REQUIRED';
+    noteGroup.appendChild(error);
+    isValid = false;
+  }
+  
+  return isValid;
+}
+
+// Get Link button handler
+// Get Link button handler
+getLinkBtn.addEventListener('click', async () => {
+  if (uploadedFiles.length === 0) {
+    showNotification('Please drop files first!');
+    return;
+  }
+  
+  if (!validateInputs()) {
+    showNotification('Please fill in all required fields!');
+    return;
+  }
+  
+  // Show uploading status
+  getLinkBtn.style.display = 'none';
+  uploadStatus.style.display = 'block';
+  uploadAborted = false;
+  
+  adjustBodyHeight();
+  
+  // Simulate upload process
+  await simulateUpload();
+  
+  if (!uploadAborted) {
+    // Generate link and QR code
+    const linkId = generateLinkId();
+    
+    // For demo: use extension URL (in production, use your server URL)
+    const extensionId = chrome.runtime.id;
+    const link = `chrome-extension://${extensionId}/viewer.html?id=${linkId}`;
+    
+    // Or use a placeholder that indicates it's a demo
+    // const link = `[DEMO] ztr.app/${linkId} - Files stored locally`;
+    
+    // Save to storage with file data
+    const fileData = {
+      id: linkId,
+      title: titleInput.value.trim(),
+      note: noteInput.value.trim(),
+      files: uploadedFiles.map(f => ({
+        name: f.name,
+        size: f.size,
+        type: f.type || 'application/octet-stream',
+        lastModified: f.lastModified,
+        path: f.webkitRelativePath || f.name
+      })),
+      fileCount: uploadedFiles.length,
+      totalSize: uploadedFiles.reduce((sum, f) => sum + f.size, 0),
+      link: link,
+      timestamp: new Date().toISOString()
+    };
+    
     chrome.storage.local.get(['transfers'], (result) => {
       const transfers = result.transfers || [];
       transfers.unshift(fileData);
       
-      // Keep only last 100 transfers
       if (transfers.length > 100) {
         transfers.splice(100);
       }
       
       chrome.storage.local.set({ transfers }, () => {
-        showNotification(`Successfully uploaded ${files.length} file(s)!`, 'success');
+        // Show upload complete
+        uploadStatus.style.display = 'none';
+        uploadComplete.style.display = 'block';
         
-        // Reset form
-        titleInput.value = '';
-        noteInput.value = '';
-        titleInput.placeholder = '0/30';
+        generatedLink.textContent = link;
+        generateQRCode(link);
         
-        // Remove progress indicator
-        const progressEl = document.querySelector('.upload-progress');
-        if (progressEl) {
-          progressEl.style.opacity = '0';
-          setTimeout(() => progressEl.remove(), 300);
-        }
+        adjustBodyHeight();
+        
+        showNotification('Upload complete! (Demo mode - files stored locally)', 'success');
       });
     });
-  }, 1500);
+  }
+});
+
+// Cancel upload
+cancelUploadBtn.addEventListener('click', () => {
+  uploadAborted = true;
+  uploadStatus.style.display = 'none';
+  getLinkBtn.style.display = 'block';
+  adjustBodyHeight();
+  showNotification('Upload cancelled');
+});
+
+// Copy link
+copyLinkBtn.addEventListener('click', () => {
+  const link = generatedLink.textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    showNotification('Link copied to clipboard!', 'success');
+    copyLinkBtn.textContent = 'COPIED!';
+    setTimeout(() => {
+      copyLinkBtn.textContent = 'COPY LINK';
+    }, 2000);
+  });
+});
+
+// Simulate upload (replace with real upload logic)
+function simulateUpload() {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, 3000); // 3 second upload simulation
+  });
+}
+
+// Generate unique link ID
+function generateLinkId() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Generate QR Code
+function generateQRCode(text) {
+  qrCode.innerHTML = '';
+  
+  // Using a simple QR code generator
+  // You'll need to add QRCode library to manifest.json or use an API
+  // For now, using a placeholder
+  const qrImage = document.createElement('div');
+  qrImage.style.cssText = `
+    width: 180px;
+    height: 180px;
+    background: url('https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(text)}') center/contain no-repeat;
+  `;
+  qrCode.appendChild(qrImage);
 }
 
 // Show upload progress

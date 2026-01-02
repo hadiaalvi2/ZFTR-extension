@@ -59,6 +59,34 @@
       </div>
     </div>
 
+    <div class="file-list-section" id="fileListSection" style="display: none;">
+      <div class="file-list" id="fileList"></div>
+    </div>
+
+    <div class="action-section" id="actionSection" style="display: none;">
+      <button class="get-link-btn" id="getLinkBtn">GET A LINK</button>
+      <div class="upload-status" id="uploadStatus" style="display: none;">
+        <div class="uploading-container">
+          <div class="upload-progress-bar">
+            <div class="upload-progress-fill"></div>
+          </div>
+          <div class="upload-text-status">Uploading...</div>
+          <button class="cancel-upload-btn" id="cancelUploadBtn">CANCEL</button>
+        </div>
+      </div>
+      <div class="upload-complete" id="uploadComplete" style="display: none;">
+        <div class="link-section">
+          <div class="link-label">YOUR LINK</div>
+          <div class="link-display" id="generatedLink">https://ztr.app/abc123</div>
+          <button class="copy-link-btn" id="copyLinkBtn">COPY LINK</button>
+        </div>
+        <div class="qr-section">
+          <div class="qr-label">QR CODE</div>
+          <div class="qr-code" id="qrCode"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">
       <div class="footer-content">
         <div class="footer-links">
