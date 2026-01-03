@@ -424,7 +424,6 @@ function validateInputs() {
 }
 
 // Get Link button handler
-// Get Link button handler
 getLinkBtn.addEventListener('click', async () => {
   if (uploadedFiles.length === 0) {
     showNotification('Please drop files first!');
@@ -443,19 +442,75 @@ getLinkBtn.addEventListener('click', async () => {
   
   adjustBodyHeight();
   
-  // Simulate upload process
-  await simulateUpload();
-  
-  if (!uploadAborted) {
-    // Generate link and QR code
+  try {
+    let finalUrl;
+    
+    if (uploadedFiles.length === 1) {
+      // Single file upload
+      console.log('Uploading single file:', uploadedFiles[0].name);
+      const uploadedUrl = await uploadToFileIO(uploadedFiles[0]);
+      
+      if (uploadAborted) {
+        uploadStatus.style.display = 'none';
+        getLinkBtn.style.display = 'block';
+        adjustBodyHeight();
+        return;
+      }
+      
+      if (!uploadedUrl) {
+        throw new Error('Upload failed - no URL returned');
+      }
+      
+      console.log('File uploaded to:', uploadedUrl);
+      
+      // Shorten the URL
+      finalUrl = await createShortUrl(uploadedUrl);
+      console.log('Shortened URL:', finalUrl);
+      
+    } else {
+      // Multiple files - upload each separately
+      showNotification('Uploading multiple files...');
+      const links = [];
+      
+      for (let i = 0; i < uploadedFiles.length; i++) {
+        if (uploadAborted) {
+          uploadStatus.style.display = 'none';
+          getLinkBtn.style.display = 'block';
+          adjustBodyHeight();
+          return;
+        }
+        
+        const file = uploadedFiles[i];
+        showNotification(`Uploading ${i + 1}/${uploadedFiles.length}: ${file.name}`);
+        
+        const url = await uploadToFileIO(file);
+        if (url) {
+          links.push(`${file.name}: ${url}`);
+        }
+      }
+      
+      // Create a text file with all links
+      const linksText = `Your uploaded files:\n\n${links.join('\n')}`;
+      const blob = new Blob([linksText], { type: 'text/plain' });
+      const linksFile = new File([blob], `${titleInput.value.trim()}_links.txt`, { type: 'text/plain' });
+      
+      const uploadedUrl = await uploadToFileIO(linksFile);
+      if (!uploadedUrl) {
+        throw new Error('Failed to upload links file');
+      }
+      
+      finalUrl = await createShortUrl(uploadedUrl);
+    }
+    
+    if (uploadAborted) {
+      uploadStatus.style.display = 'none';
+      getLinkBtn.style.display = 'block';
+      adjustBodyHeight();
+      return;
+    }
+    
+    // Generate link ID for storage
     const linkId = generateLinkId();
-    
-    // For demo: use extension URL (in production, use your server URL)
-    const extensionId = chrome.runtime.id;
-    const link = `chrome-extension://${extensionId}/viewer.html?id=${linkId}`;
-    
-    // Or use a placeholder that indicates it's a demo
-    // const link = `[DEMO] ztr.app/${linkId} - Files stored locally`;
     
     // Save to storage with file data
     const fileData = {
@@ -471,7 +526,7 @@ getLinkBtn.addEventListener('click', async () => {
       })),
       fileCount: uploadedFiles.length,
       totalSize: uploadedFiles.reduce((sum, f) => sum + f.size, 0),
-      link: link,
+      link: finalUrl,
       timestamp: new Date().toISOString()
     };
     
@@ -488,14 +543,21 @@ getLinkBtn.addEventListener('click', async () => {
         uploadStatus.style.display = 'none';
         uploadComplete.style.display = 'block';
         
-        generatedLink.textContent = link;
-        generateQRCode(link);
+        generatedLink.textContent = finalUrl;
+        generateQRCode(finalUrl);
         
         adjustBodyHeight();
         
-        showNotification('Upload complete! (Demo mode - files stored locally)', 'success');
+        showNotification('Upload complete! Link created.', 'success');
       });
     });
+    
+  } catch (error) {
+    console.error('Upload process error:', error);
+    uploadStatus.style.display = 'none';
+    getLinkBtn.style.display = 'block';
+    showNotification('Upload failed: ' + error.message);
+    adjustBodyHeight();
   }
 });
 
@@ -520,13 +582,105 @@ copyLinkBtn.addEventListener('click', () => {
   });
 });
 
-// Simulate upload (replace with real upload logic)
-function simulateUpload() {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, 3000); // 3 second upload simulation
-  });
+async function uploadToFileIO(file) {
+  try {
+    console.log('Starting upload for:', file.name, 'Size:', file.size);
+    
+    // Check file size (most free services have limits)
+    const maxSize = 100 * 1024 * 1024; // 100MB
+    if (file.size > maxSize) {
+      throw new Error('File too large. Maximum size is 100MB.');
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Try tmpfiles.org - more reliable than file.io
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    
+    try {
+      const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      console.log('Upload response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Upload response data:', data);
+      
+      // tmpfiles.org returns: {status: "success", data: {url: "https://tmpfiles.org/123/file.txt"}}
+      if (data.status === 'success' && data.data && data.data.url) {
+        // Convert tmpfiles.org URL to direct download link
+        const directUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+        console.log('Upload successful! Direct link:', directUrl);
+        return directUrl;
+      }
+      
+      throw new Error('Invalid response from tmpfiles.org');
+      
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Upload timeout - file too large or slow connection');
+      }
+      
+      // If tmpfiles.org fails, try file.io as fallback
+      console.log('tmpfiles.org failed, trying file.io...');
+      return await uploadToFileIOFallback(file);
+    }
+    
+  } catch (error) {
+    console.error('Upload error:', error);
+    throw error;
+  }
+}
+
+// Fallback upload function for file.io
+async function uploadToFileIOFallback(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  
+  try {
+    const response = await fetch('https://file.io', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`file.io upload failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.link) {
+      return data.link;
+    }
+    
+    throw new Error('Both upload services failed');
+    
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Upload timeout - please try a smaller file');
+    }
+    throw error;
+  }
 }
 
 // Generate unique link ID
@@ -537,6 +691,42 @@ function generateLinkId() {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+// Create short URL using TinyURL API
+async function createShortUrl(longUrl) {
+  try {
+    const response = await fetch(CONFIG.TINYURL_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CONFIG.TINYURL_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        url: longUrl,
+        domain: 'tinyurl.com'
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('TinyURL API error:', response.status);
+      // If shortening fails, return the original URL
+      return longUrl;
+    }
+    
+    const data = await response.json();
+    
+    if (data.data && data.data.tiny_url) {
+      return data.data.tiny_url;
+    } else {
+      console.error('Invalid TinyURL response:', data);
+      return longUrl;
+    }
+  } catch (error) {
+    console.error('Error creating short URL:', error);
+    // If shortening fails, return the original URL
+    return longUrl;
+  }
 }
 
 // Generate QR Code
