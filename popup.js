@@ -1,3 +1,11 @@
+// Check if JSZip is loaded
+if (typeof JSZip === 'undefined') {
+  console.error('CRITICAL: JSZip library not found!');
+  showNotification('Error: Extension files are missing. Please reinstall.', 'info');
+} else {
+  console.log('✓ JSZip loaded successfully');
+}
+
 // DOM Elements
 const dropOverlay = document.getElementById('dropOverlay');
 const titleInput = document.getElementById('title');
@@ -65,11 +73,28 @@ document.addEventListener('drop', async (e) => {
   
   // Process all items (files and folders)
   if (items) {
+    let folderCount = 0;
+    let fileCount = 0;
+    
     for (let i = 0; i < items.length; i++) {
       const item = items[i].webkitGetAsEntry();
       if (item) {
+        if (item.isDirectory) {
+          folderCount++;
+        } else {
+          fileCount++;
+        }
         await processEntry(item, files);
       }
+    }
+    
+    // Show appropriate message
+    if (folderCount > 0 && fileCount > 0) {
+      console.log(`Dropped ${folderCount} folder(s) and ${fileCount} file(s)`);
+    } else if (folderCount > 0) {
+      console.log(`Dropped ${folderCount} folder(s)`);
+    } else {
+      console.log(`Dropped ${fileCount} file(s)`);
     }
   } else {
     files.push(...Array.from(e.dataTransfer.files));
@@ -249,15 +274,31 @@ function triggerFileInput(isFolder) {
 }
 
 // Handle file uploads
-// Handle file uploads
 function handleFiles(files) {
   if (files.length === 0) return;
   
   console.log('Files dropped:', files);
-  uploadedFiles = files;
+  
+  // Filter out empty files
+  const validFiles = files.filter(file => {
+    if (file.size === 0) {
+      console.warn('Skipping empty file:', file.name);
+      showNotification(`Skipped empty file: ${file.name}`, 'info');
+      return false;
+    }
+    return true;
+  });
+  
+  if (validFiles.length === 0) {
+    showNotification('No valid files to upload (all files are empty)');
+    return;
+  }
+  
+  // Append to existing files instead of replacing
+  uploadedFiles = [...uploadedFiles, ...validFiles];
   
   // Show file list
-  displayFileList(files);
+  displayFileList(uploadedFiles);
   
   // Show action section
   const fileListSection = document.getElementById('fileListSection');
@@ -271,6 +312,8 @@ function handleFiles(files) {
   uploadStatus.style.display = 'none';
   uploadComplete.style.display = 'none';
   getLinkBtn.style.display = 'block';
+  
+  showNotification(`Added ${validFiles.length} file(s)`, 'success');
 }
 
 // Display file list
@@ -278,8 +321,14 @@ function displayFileList(files) {
   const fileList = document.getElementById('fileList');
   fileList.innerHTML = '';
   
+  if (files.length === 0) {
+    fileList.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">No files selected</div>';
+    return;
+  }
+  
   // Group files by folder
   const filesByFolder = new Map();
+  const singleFiles = [];
   
   files.forEach((file, index) => {
     const path = file.webkitRelativePath || file.name;
@@ -291,39 +340,51 @@ function displayFileList(files) {
       if (!filesByFolder.has(folderName)) {
         filesByFolder.set(folderName, []);
       }
-      filesByFolder.get(folderName).push({ file, index });
+      filesByFolder.get(folderName).push({ file, index, path });
     } else {
-      // Single file
-      filesByFolder.set(path, [{ file, index }]);
+      // Single file (not in a folder)
+      singleFiles.push({ file, index, path });
     }
   });
   
-  // Display files
-  filesByFolder.forEach((items, key) => {
-    if (items.length > 1) {
-      // It's a folder
-      const folderSize = items.reduce((sum, item) => sum + item.file.size, 0);
-      const fileItem = createFileItem(key, items.length, folderSize, true, items[0].index);
-      fileList.appendChild(fileItem);
-    } else {
-      // Single file
-      const { file, index } = items[0];
-      const fileItem = createFileItem(file.name, 1, file.size, false, index, getFileExtension(file.name));
-      fileList.appendChild(fileItem);
-    }
+  // Display folders first
+  filesByFolder.forEach((items, folderName) => {
+    const folderSize = items.reduce((sum, item) => sum + item.file.size, 0);
+    const fileItem = createFileItem(
+      folderName, 
+      items.length, 
+      folderSize, 
+      true, 
+      items.map(i => i.index),
+      ''
+    );
+    fileList.appendChild(fileItem);
+  });
+  
+  // Then display individual files
+  singleFiles.forEach(({ file, index }) => {
+    const fileItem = createFileItem(
+      file.name, 
+      1, 
+      file.size, 
+      false, 
+      [index], 
+      getFileExtension(file.name)
+    );
+    fileList.appendChild(fileItem);
   });
 }
 
 // Create file item element
-function createFileItem(name, count, size, isFolder, index, extension = '') {
+function createFileItem(name, count, size, isFolder, indices, extension = '') {
   const item = document.createElement('div');
   item.className = 'file-item';
-  item.dataset.index = index;
+  item.dataset.indices = JSON.stringify(indices);
   
   const displayName = isFolder ? name : name;
   const details = isFolder 
-    ? `${count} files - ${formatBytes(size)}` 
-    : `${formatBytes(size)} - ${extension.toUpperCase()}`;
+    ? `${count} file(s) - ${formatBytes(size)}` 
+    : `${formatBytes(size)}${extension ? ' - ' + extension.toUpperCase() : ''}`;
   
   item.innerHTML = `
     <div class="file-item-left">
@@ -341,7 +402,11 @@ function createFileItem(name, count, size, isFolder, index, extension = '') {
   // Add remove functionality
   const removeBtn = item.querySelector('.file-remove-btn');
   removeBtn.addEventListener('click', () => {
-    removeFile(index, isFolder ? name : null);
+    if (isFolder) {
+      removeFolder(name);
+    } else {
+      removeFileByIndex(indices[0]);
+    }
   });
   
   return item;
@@ -353,29 +418,35 @@ function getFileExtension(filename) {
   return ext === filename ? '' : ext;
 }
 
-// Remove file from list
-function removeFile(startIndex, folderName) {
-  if (folderName) {
-    // Remove all files in folder
-    uploadedFiles = uploadedFiles.filter(file => {
-      const path = file.webkitRelativePath || file.name;
-      return !path.startsWith(folderName + '/');
-    });
-  } else {
-    // Remove single file
-    uploadedFiles.splice(startIndex, 1);
-  }
+// Remove single file by index
+function removeFileByIndex(index) {
+  uploadedFiles.splice(index, 1);
   
   if (uploadedFiles.length === 0) {
-    // Hide sections if no files left
     document.getElementById('fileListSection').style.display = 'none';
     actionSection.style.display = 'none';
-    adjustBodyHeight();
   } else {
-    // Re-display file list
     displayFileList(uploadedFiles);
-    adjustBodyHeight();
   }
+  adjustBodyHeight();
+}
+
+// Remove entire folder
+function removeFolder(folderName) {
+  uploadedFiles = uploadedFiles.filter(file => {
+    const path = file.webkitRelativePath || file.name;
+    const pathParts = path.split('/');
+    return pathParts.length <= 1 || pathParts[0] !== folderName;
+  });
+  
+  if (uploadedFiles.length === 0) {
+    document.getElementById('fileListSection').style.display = 'none';
+    actionSection.style.display = 'none';
+  } else {
+    displayFileList(uploadedFiles);
+  }
+  adjustBodyHeight();
+  showNotification(`Removed folder: ${folderName}`, 'info');
 }
 
 // Adjust body height dynamically
@@ -445,68 +516,59 @@ getLinkBtn.addEventListener('click', async () => {
   try {
     let finalUrl;
     
-    if (uploadedFiles.length === 1) {
-      // Single file upload
-      console.log('Uploading single file:', uploadedFiles[0].name);
-      const uploadedUrl = await uploadToFileIO(uploadedFiles[0]);
+    // Check if we have folders
+    const hasFolders = uploadedFiles.some(f => (f.webkitRelativePath || '').includes('/'));
+    
+    if (hasFolders) {
+      // ZIP the folder(s) and upload
+      showNotification('Creating ZIP archive...');
+      const zipBlob = await createZipFromFiles(uploadedFiles, titleInput.value.trim());
       
       if (uploadAborted) {
-        uploadStatus.style.display = 'none';
-        getLinkBtn.style.display = 'block';
-        adjustBodyHeight();
+        resetUploadUI();
         return;
       }
       
-      if (!uploadedUrl) {
-        throw new Error('Upload failed - no URL returned');
+      showNotification('Uploading ZIP file...');
+      const zipFile = new File([zipBlob], `${titleInput.value.trim()}.zip`, { type: 'application/zip' });
+      const uploadedUrl = await uploadToCatbox(zipFile);
+      
+      if (uploadAborted) {
+        resetUploadUI();
+        return;
       }
       
-      console.log('File uploaded to:', uploadedUrl);
+      finalUrl = uploadedUrl;
+      console.log('ZIP uploaded successfully:', finalUrl);
       
-      // Shorten the URL
-      finalUrl = await createShortUrl(uploadedUrl);
-      console.log('Shortened URL:', finalUrl);
+    } else if (uploadedFiles.length === 1) {
+      // Single file upload
+      showNotification('Uploading file...');
+      finalUrl = await uploadToCatbox(uploadedFiles[0]);
+      
+      if (uploadAborted) {
+        resetUploadUI();
+        return;
+      }
       
     } else {
-      // Multiple files - upload each separately
-      showNotification('Uploading multiple files...');
-      const links = [];
+      // Multiple individual files - create a ZIP
+      showNotification('Creating ZIP archive...');
+      const zipBlob = await createZipFromFiles(uploadedFiles, titleInput.value.trim());
       
-      for (let i = 0; i < uploadedFiles.length; i++) {
-        if (uploadAborted) {
-          uploadStatus.style.display = 'none';
-          getLinkBtn.style.display = 'block';
-          adjustBodyHeight();
-          return;
-        }
-        
-        const file = uploadedFiles[i];
-        showNotification(`Uploading ${i + 1}/${uploadedFiles.length}: ${file.name}`);
-        
-        const url = await uploadToFileIO(file);
-        if (url) {
-          links.push(`${file.name}: ${url}`);
-        }
+      if (uploadAborted) {
+        resetUploadUI();
+        return;
       }
       
-      // Create a text file with all links
-      const linksText = `Your uploaded files:\n\n${links.join('\n')}`;
-      const blob = new Blob([linksText], { type: 'text/plain' });
-      const linksFile = new File([blob], `${titleInput.value.trim()}_links.txt`, { type: 'text/plain' });
+      showNotification('Uploading ZIP file...');
+      const zipFile = new File([zipBlob], `${titleInput.value.trim()}.zip`, { type: 'application/zip' });
+      finalUrl = await uploadToCatbox(zipFile);
       
-      const uploadedUrl = await uploadToFileIO(linksFile);
-      if (!uploadedUrl) {
-        throw new Error('Failed to upload links file');
+      if (uploadAborted) {
+        resetUploadUI();
+        return;
       }
-      
-      finalUrl = await createShortUrl(uploadedUrl);
-    }
-    
-    if (uploadAborted) {
-      uploadStatus.style.display = 'none';
-      getLinkBtn.style.display = 'block';
-      adjustBodyHeight();
-      return;
     }
     
     // Generate link ID for storage
@@ -561,6 +623,130 @@ getLinkBtn.addEventListener('click', async () => {
   }
 });
 
+// Helper function to reset upload UI
+function resetUploadUI() {
+  uploadStatus.style.display = 'none';
+  getLinkBtn.style.display = 'block';
+  adjustBodyHeight();
+}
+
+// Create ZIP from files
+async function createZipFromFiles(files, archiveName) {
+  const zip = new JSZip();
+  
+  for (const file of files) {
+    const path = file.webkitRelativePath || file.name;
+    zip.file(path, file);
+  }
+  
+  // Generate ZIP blob
+  const zipBlob = await zip.generateAsync({
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 }
+  });
+  
+  return zipBlob;
+}
+
+// Upload to Catbox.moe (accepts all file types, 200MB limit)
+async function uploadToCatbox(file) {
+  try {
+    console.log('Uploading to Catbox:', file.name, 'Size:', file.size);
+    
+    // Check file size (Catbox limit is 200MB)
+    const maxSize = 200 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error('File too large. Maximum size is 200MB.');
+    }
+    
+    const formData = new FormData();
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', file);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+    
+    const response = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.status}`);
+    }
+    
+    const url = await response.text();
+    
+    // Catbox returns just the URL as plain text
+    if (url && url.startsWith('https://files.catbox.moe/')) {
+      console.log('Upload successful:', url);
+      return url;
+    }
+    
+    throw new Error('Invalid response from Catbox');
+    
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Upload timeout - file too large or slow connection');
+    }
+    console.error('Catbox upload error:', error);
+    
+    // Try alternative service: 0x0.st
+    console.log('Catbox failed, trying 0x0.st...');
+    return await uploadTo0x0(file);
+  }
+}
+
+// Fallback: Upload to 0x0.st (accepts all file types, 512MB limit)
+async function uploadTo0x0(file) {
+  try {
+    console.log('Uploading to 0x0.st:', file.name);
+    
+    const maxSize = 512 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error('File too large. Maximum size is 512MB.');
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    
+    const response = await fetch('https://0x0.st', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.status}`);
+    }
+    
+    const url = await response.text();
+    
+    if (url && url.trim().startsWith('https://')) {
+      const cleanUrl = url.trim();
+      console.log('Upload successful:', cleanUrl);
+      return cleanUrl;
+    }
+    
+    throw new Error('All upload services failed');
+    
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Upload timeout');
+    }
+    throw error;
+  }
+}
+
 // Cancel upload
 cancelUploadBtn.addEventListener('click', () => {
   uploadAborted = true;
@@ -582,107 +768,6 @@ copyLinkBtn.addEventListener('click', () => {
   });
 });
 
-async function uploadToFileIO(file) {
-  try {
-    console.log('Starting upload for:', file.name, 'Size:', file.size);
-    
-    // Check file size (most free services have limits)
-    const maxSize = 100 * 1024 * 1024; // 100MB
-    if (file.size > maxSize) {
-      throw new Error('File too large. Maximum size is 100MB.');
-    }
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    // Try tmpfiles.org - more reliable than file.io
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-    
-    try {
-      const response = await fetch('https://tmpfiles.org/api/v1/upload', {
-        method: 'POST',
-        body: formData,
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      console.log('Upload response status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Upload response data:', data);
-      
-      // tmpfiles.org returns: {status: "success", data: {url: "https://tmpfiles.org/123/file.txt"}}
-      if (data.status === 'success' && data.data && data.data.url) {
-        // Convert tmpfiles.org URL to direct download link
-        const directUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-        console.log('Upload successful! Direct link:', directUrl);
-        return directUrl;
-      }
-      
-      throw new Error('Invalid response from tmpfiles.org');
-      
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      
-      if (fetchError.name === 'AbortError') {
-        throw new Error('Upload timeout - file too large or slow connection');
-      }
-      
-      // If tmpfiles.org fails, try file.io as fallback
-      console.log('tmpfiles.org failed, trying file.io...');
-      return await uploadToFileIOFallback(file);
-    }
-    
-  } catch (error) {
-    console.error('Upload error:', error);
-    throw error;
-  }
-}
-
-// Fallback upload function for file.io
-async function uploadToFileIOFallback(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
-  
-  try {
-    const response = await fetch('https://file.io', {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`file.io upload failed: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (data.success && data.link) {
-      return data.link;
-    }
-    
-    throw new Error('Both upload services failed');
-    
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error('Upload timeout - please try a smaller file');
-    }
-    throw error;
-  }
-}
-
 // Generate unique link ID
 function generateLinkId() {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -693,49 +778,10 @@ function generateLinkId() {
   return result;
 }
 
-// Create short URL using TinyURL API
-async function createShortUrl(longUrl) {
-  try {
-    const response = await fetch(CONFIG.TINYURL_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CONFIG.TINYURL_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        url: longUrl,
-        domain: 'tinyurl.com'
-      })
-    });
-    
-    if (!response.ok) {
-      console.error('TinyURL API error:', response.status);
-      // If shortening fails, return the original URL
-      return longUrl;
-    }
-    
-    const data = await response.json();
-    
-    if (data.data && data.data.tiny_url) {
-      return data.data.tiny_url;
-    } else {
-      console.error('Invalid TinyURL response:', data);
-      return longUrl;
-    }
-  } catch (error) {
-    console.error('Error creating short URL:', error);
-    // If shortening fails, return the original URL
-    return longUrl;
-  }
-}
-
 // Generate QR Code
 function generateQRCode(text) {
   qrCode.innerHTML = '';
   
-  // Using a simple QR code generator
-  // You'll need to add QRCode library to manifest.json or use an API
-  // For now, using a placeholder
   const qrImage = document.createElement('div');
   qrImage.style.cssText = `
     width: 180px;
@@ -743,103 +789,6 @@ function generateQRCode(text) {
     background: url('https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(text)}') center/contain no-repeat;
   `;
   qrCode.appendChild(qrImage);
-}
-
-// Show upload progress
-function showUploadProgress(fileData) {
-  const progress = document.createElement('div');
-  progress.className = 'upload-progress';
-  progress.innerHTML = `
-    <div class="progress-content">
-      <div class="progress-icon">⬆</div>
-      <div class="progress-text">Uploading ${fileData.fileCount} file(s)...</div>
-      <div class="progress-bar">
-        <div class="progress-fill"></div>
-      </div>
-      <div class="progress-size">${formatBytes(fileData.totalSize)}</div>
-    </div>
-  `;
-  
-  document.body.appendChild(progress);
-  
-  // Add styles
-  const style = document.createElement('style');
-  style.textContent = `
-    .upload-progress {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #fff;
-      border: 2px solid #000;
-      padding: 30px;
-      z-index: 10001;
-      min-width: 300px;
-      text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      animation: slideIn 0.3s ease;
-    }
-    
-    .progress-icon {
-      font-size: 48px;
-      margin-bottom: 15px;
-      animation: bounce 1s infinite;
-    }
-    
-    .progress-text {
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      font-weight: 600;
-      margin-bottom: 20px;
-    }
-    
-    .progress-bar {
-      width: 100%;
-      height: 4px;
-      background: #e0e0e0;
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
-    
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(to right, #4285f4, #ea4335, #fbbc04, #34a853);
-      animation: progressFill 1.5s ease-in-out;
-    }
-    
-    .progress-size {
-      font-size: 9px;
-      letter-spacing: 1px;
-      color: #666;
-    }
-    
-    @keyframes slideIn {
-      from {
-        transform: translate(-50%, -60%);
-        opacity: 0;
-      }
-      to {
-        transform: translate(-50%, -50%);
-        opacity: 1;
-      }
-    }
-    
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-    
-    @keyframes progressFill {
-      from { width: 0; }
-      to { width: 100%; }
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-// Generate unique ID
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
 // Format bytes
@@ -916,9 +865,9 @@ function showHistoryModal(transfers) {
               <span>${t.fileCount} file(s)</span>
               <span>•</span>
               <span>${formatBytes(t.totalSize)}</span>
-              ${t.hasFolder ? '<span>•</span><span>📁 Folder</span>' : ''}
             </div>
             ${t.note ? `<div class="history-note">${escapeHtml(t.note)}</div>` : ''}
+            <div class="history-link">${t.link}</div>
           </div>
         `).join('')}
       </div>
@@ -946,7 +895,7 @@ function showHistoryModal(transfers) {
     }
     
     .history-modal-content {
-      padding: 20px 38px 24px;
+      padding: 20px 28px 24px;
       min-height: 100%;
       display: flex;
       flex-direction: column;
@@ -1029,6 +978,7 @@ function showHistoryModal(transfers) {
       display: flex;
       gap: 8px;
       align-items: center;
+      margin-bottom: 8px;
     }
     
     .history-note {
@@ -1038,6 +988,17 @@ function showHistoryModal(transfers) {
       font-style: italic;
       padding-top: 8px;
       border-top: 1px solid #e0e0e0;
+      margin-bottom: 8px;
+    }
+    
+    .history-link {
+      font-size: 9px;
+      color: #0066cc;
+      word-break: break-all;
+      font-family: monospace;
+      background: #f5f5f5;
+      padding: 8px;
+      margin-top: 8px;
     }
     
     .history-footer {
@@ -1078,15 +1039,26 @@ function showHistoryModal(transfers) {
       });
     }
   });
+  
+  // Click on history item to copy link
+  modal.querySelectorAll('.history-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      const linkElement = item.querySelector('.history-link');
+      const link = linkElement.textContent;
+      navigator.clipboard.writeText(link).then(() => {
+        showNotification('Link copied!', 'success');
+      });
+    });
+  });
 }
 
 // Color theme button
 const themes = [
-  { name: 'Beige', color: '#fff' },
+  { name: 'White', color: '#fff' },
   { name: 'Blue', color: '#e8f4f8' },
   { name: 'Yellow', color: '#fef5e7' },
   { name: 'Gray', color: '#f0f0f0' },
-  { name: 'White', color: '#fff' }
+  { name: 'Green', color: '#e8f5e9' }
 ];
 let currentThemeIndex = 0;
 
@@ -1109,6 +1081,7 @@ function applyTheme(color) {
   const historyModal = document.querySelector('.history-modal');
   if (historyModal) {
     historyModal.style.backgroundColor = color;
+    historyModal.querySelector('.history-modal-content').style.backgroundColor = color;
   }
 }
 
@@ -1178,5 +1151,12 @@ if (closeBtn) {
   });
 }
 
-// Initialize
-console.log('ZTR Extension Loaded - Ready for uploads');
+// Check if JSZip is loaded
+window.addEventListener('load', () => {
+  if (typeof JSZip === 'undefined') {
+    console.error('JSZip library not loaded!');
+    showNotification('Error: Required library not loaded. Please refresh.', 'info');
+  } else {
+    console.log('ZTR Extension Loaded - Ready for uploads');
+  }
+});

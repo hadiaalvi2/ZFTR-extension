@@ -12,8 +12,13 @@
   "https://api.tinyurl.com/*",
   "https://file.io/*",
   "https://*.file.io/*",
-  "https://tmpfiles.org/*"
+  "https://tmpfiles.org/*",
+  "https://catbox.moe/*",
+  "https://0x0.st/*"
 ],
+"content_security_policy": {
+  "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+},
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
